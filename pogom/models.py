@@ -11,7 +11,7 @@ from datetime import timedelta
 from base64 import b64encode
 
 from . import config
-from .utils import get_pokemon_name, load_credentials, get_args
+from .utils import get_pokemon_name, get_pokemon_rarity, load_credentials, get_args
 from .transform import transform_from_wgs_to_gcj
 from .customLog import printPokemon
 
@@ -66,7 +66,7 @@ class Pokemon(BaseModel):
     disappear_time = DateTimeField()
 
     @classmethod
-    def get_active(cls):
+    def get_active(cls, common=True, uncommon=True, rare=True, very_rare=True, ultra_rare=True):
         query = (Pokemon
                  .select()
                  .where(Pokemon.disappear_time > datetime.utcnow())
@@ -75,7 +75,17 @@ class Pokemon(BaseModel):
         pokemons = []
         for p in query:
             p['pokemon_name'] = get_pokemon_name(p['pokemon_id'])
-            pokemons.append(p)
+            p['pokemon_rarity'] = get_pokemon_rarity(p['pokemon_id'])
+            if p['pokemon_rarity'] == "Common" and common:
+              pokemons.append(p)
+            elif p['pokemon_rarity'] == "Uncommon" and uncommon:
+              pokemons.append(p)
+            elif p['pokemon_rarity'] == "Rare" and rare:
+              pokemons.append(p)
+            elif p['pokemon_rarity'] == "Very Rare" and very_rare:
+              pokemons.append(p)
+            elif p['pokemon_rarity'] == "Ultra Rare" and ultra_rare:
+              pokemons.append(p)
 
         return pokemons
 
@@ -90,7 +100,17 @@ class Pokemon(BaseModel):
         pokemons = []
         for p in query:
             p['pokemon_name'] = get_pokemon_name(p['pokemon_id'])
-            pokemons.append(p)
+            p['pokemon_rarity'] = get_pokemon_rarity(p['pokemon_id'])
+            if p['pokemon_rarity'] == "Common" and common:
+              pokemons.append(p)
+            elif p['pokemon_rarity'] == "Uncommon" and uncommon:
+              pokemons.append(p)
+            elif p['pokemon_rarity'] == "Rare" and rare:
+              pokemons.append(p)
+            elif p['pokemon_rarity'] == "Very Rare" and very_rare:
+              pokemons.append(p)
+            elif p['pokemon_rarity'] == "Ultra Rare" and ultra_rare:
+              pokemons.append(p)
 
         return pokemons
 

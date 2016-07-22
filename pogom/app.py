@@ -42,11 +42,29 @@ class Pogom(Flask):
     def raw_data(self):
         d = {}
         if request.args.get('pokemon', 'true') == 'true':
+            common = True
+            uncommon = True
+            rare = True
+            very_rare = True
+            ultra_rare = True
+
+            if request.args.get('pokemon_common', 'true') != 'true':
+                common = False
+            if request.args.get('pokemon_uncommon', 'true') != 'true':
+                uncommon = False
+            if request.args.get('pokemon_rare', 'true') != 'true':
+                rare = False
+            if request.args.get('pokemon_very_rare', 'true') != 'true':
+                very_rare = False
+            if request.args.get('pokemon_ultra_rare', 'true') != 'true':
+                ultra_rare = False
+                
             if request.args.get('ids'):
                 ids = [int(x) for x in request.args.get('ids').split(',')]
                 d['pokemons'] = Pokemon.get_active_by_id(ids)
             else:
-                d['pokemons'] = Pokemon.get_active()
+                d['pokemons'] = Pokemon.get_active(common=common, uncommon=uncommon,
+                rare=rare, very_rare=very_rare, ultra_rare=ultra_rare)
 
         if request.args.get('pokestops', 'false') == 'true':
             d['pokestops'] = Pokestop.get_all()

@@ -107,6 +107,11 @@ function initSidebar() {
     $('#pokestops-switch').prop('checked', localStorage.showPokestops === 'true');
     $('#scanned-switch').prop('checked', localStorage.showScanned === 'true');
     $('#sound-switch').prop('checked', localStorage.playSound === 'true');
+    $('#pokemon-common-switch').prop('checked', localStorage.showCommon === 'true');
+    $('#pokemon-uncommon-switch').prop('checked', localStorage.showUncommon === 'true');
+    $('#pokemon-rare-switch').prop('checked', localStorage.showRare === 'true');
+    $('#pokemon-veryrare-switch').prop('checked', localStorage.showVeryRare === 'true');
+    $('#pokemon-ultrarare-switch').prop('checked', localStorage.showUltraRare === 'true');
 
     var searchBox = new google.maps.places.SearchBox(document.getElementById('next-location'));
 
@@ -124,7 +129,7 @@ function initSidebar() {
 
 function pad(number) { return number <= 99 ? ("0" + number).slice(-2) : number; }
 
-function pokemonLabel(name, disappear_time, id, latitude, longitude) {
+function pokemonLabel(name, rarity, disappear_time, id, latitude, longitude) {
     disappear_date = new Date(disappear_time)
 
     var contentstring = `
@@ -134,6 +139,7 @@ function pokemonLabel(name, disappear_time, id, latitude, longitude) {
             <small>
                 <a href='http://www.pokemon.com/us/pokedex/${id}' target='_blank' title='View in Pokedex'>#${id}</a>
             </small>
+            <span> (${rarity})</span>
         </div>
         <div>
             Disappears at ${pad(disappear_date.getHours())}:${pad(disappear_date.getMinutes())}:${pad(disappear_date.getSeconds())}
@@ -245,20 +251,20 @@ function setupPokemonMarker(item) {
             lng: item.longitude
         },
         zIndex: 9999,
-        optimized: false, 
+        optimized: false,
         map: map,
         icon: 'static/icons/' + item.pokemon_id + '.png'
     });
 
     marker.infoWindow = new google.maps.InfoWindow({
-        content: pokemonLabel(item.pokemon_name, item.disappear_time, item.pokemon_id, item.latitude, item.longitude)
+        content: pokemonLabel(item.pokemon_name, item.pokemon_rarity, item.disappear_time, item.pokemon_id, item.latitude, item.longitude)
     });
 
     if (notifiedPokemon.indexOf(item.pokemon_id) > -1) {
         if (localStorage.playSound === 'true') {
           audio.play();
         }
-        
+
         sendNotification('A wild ' + item.pokemon_name + ' appeared!', 'Click to load map', 'static/icons/' + item.pokemon_id + '.png', item.latitude, item.longitude);
     }
 
@@ -294,7 +300,7 @@ function setupPokestopMarker(item) {
         },
         map: map,
         zIndex: 2,
-        optimized: false, 
+        optimized: false,
         icon: 'static/forts/' + imagename + '.png',
     });
 
@@ -383,7 +389,7 @@ function clearStaleMarkers() {
             delete map_pokemons[key];
         }
     });
-    
+
     $.each(map_lure_pokemons, function(key, value) {
 
         if (map_lure_pokemons[key]['lure_expiration'] < new Date().getTime() ||
@@ -408,6 +414,11 @@ function updateMap() {
     var loadGyms = localStorage.showGyms || true;
     var loadPokestops = true;
     var loadScanned = localStorage.showScanned || false;
+    var loadCommon = localStorage.showCommon = localStorage.showCommon || true;
+    var loadUncommon = localStorage.showUncommon = localStorage.showUncommon || true;
+    var loadRare = localStorage.showRare = localStorage.showRare || true;
+    var loadVeryRare = localStorage.showVeryRare = localStorage.showVeryRare || true;
+    var loadUltraRare = localStorage.showUltraRare = localStorage.showUltraRare || true;
 
     $.ajax({
         url: "raw_data",
@@ -416,7 +427,12 @@ function updateMap() {
             'pokemon': loadPokemon,
             'pokestops': loadPokestops,
             'gyms': loadGyms,
-            'scanned': loadScanned
+            'scanned': loadScanned,
+            'pokemon_common': loadCommon,
+            'pokemon_uncommon': loadUncommon,
+            'pokemon_rare': loadRare,
+            'pokemon_very_rare': loadVeryRare,
+            'pokemon_ultra_rare': loadUltraRare
         },
         dataType: "json"
     }).done(function(result) {
@@ -425,7 +441,14 @@ function updateMap() {
               return false; // in case the checkbox was unchecked in the meantime.
           }
           if (!(item.encounter_id in map_pokemons) &&
-                    excludedPokemon.indexOf(item.pokemon_id) < 0) {
+                  excludedPokemon.indexOf(item.pokemon_id) < 0
+                ) {
+              if (!localStorage.showCommon && item.pokemon_rarity == "Common") return true
+              if (!localStorage.showUncommon && item.pokemon_rarity == "Uncommon") return true
+              if (!localStorage.showRare && item.pokemon_rarity == "Rare") return true
+              if (!localStorage.showVeryRare && item.pokemon_rarity == "Very Rare") return true
+              if (!localStorage.showUltraRare && item.pokemon_rarity == "Ultra Rare") return true
+
               // add marker to map and item to dict
               if (item.marker) item.marker.setMap(null);
               item.marker = setupPokemonMarker(item);
@@ -436,35 +459,35 @@ function updateMap() {
         $.each(result.pokestops, function(i, item) {
         	if (!(localStorage.showPokestops === 'true')) {
                 return false;
-            } 
+            }
             if ((localStorage.showPokestops === 'true') && map_pokestops[item.pokestop_id] == null) { // add marker to map and item to dict
                 // add marker to map and item to dict
                 if (item.marker) item.marker.setMap(null);
                 item.marker = setupPokestopMarker(item);
                 map_pokestops[item.pokestop_id] = item;
             }
-            
-            
+
+
          });
-         $.each(result.pokestops, function(i, item) { 
+         $.each(result.pokestops, function(i, item) {
          if (!(localStorage.showPokemon === 'true')) {
                 return false;
-            }  
+            }
             var item2 = {pokestop_id: item.pokestop_id, lure_expiration: item.lure_expiration, pokemon_id: item.active_pokemon_id, latitude: item.latitude+ 0.00005, longitude: item.longitude + 0.00005, pokemon_name: idToPokemon[item.active_pokemon_id], disappear_time: item.lure_expiration}
             if(map_lure_pokemons[item2.pokestop_id] == null  && item2.lure_expiration) {
             	//if (item.marker) item.marker.setMap(null);
                 item2.marker = setupPokemonMarker(item2);
   		map_lure_pokemons[item2.pokestop_id] = item2;
-  		
+
   		}
             if(map_lure_pokemons[item.pokestop_id] != null  && item2.lure_expiration && item2.active_pokemon_id != map_lure_pokemons[item2.pokestop_id].active_pokemon_id) {
             	//if (item.marker) item.marker.setMap(null);
             	map_lure_pokemons[item2.pokestop_id].marker.setMap(null);
             	item2.marker = setupPokemonMarker(item2);
                 map_lure_pokemons[item2.pokestop_id] = item2;
-  		
+
   		}
-            
+
 
         });
 
@@ -807,6 +830,76 @@ $(function () {
                 map_pokemons[key].marker.setMap(null);
             });
             map_pokemons = {}
+    }
+});
+
+$('#pokemon-common-switch').change(function() {
+    localStorage["showCommon"] = this.checked;
+    if (this.checked) {
+        updateMap();
+    } else {
+        $.each(map_pokemons, function(key, value) {
+            if (map_pokemons[key]['pokemon_rarity'] == "Common") {
+                map_pokemons[key].marker.setMap(null);
+                delete map_pokemons[key]
+            }
+        });
+    }
+});
+
+$('#pokemon-uncommon-switch').change(function() {
+    localStorage["showUncommon"] = this.checked;
+    if (this.checked) {
+        updateMap();
+    } else {
+        $.each(map_pokemons, function(key, value) {
+            if (map_pokemons[key]['pokemon_rarity'] == "Uncommon") {
+                map_pokemons[key].marker.setMap(null);
+                delete map_pokemons[key]
+            }
+        });
+    }
+});
+
+$('#pokemon-rare-switch').change(function() {
+    localStorage["showRare"] = this.checked;
+    if (this.checked) {
+        updateMap();
+    } else {
+        $.each(map_pokemons, function(key, value) {
+            if (map_pokemons[key]['pokemon_rarity'] == "Rare") {
+                map_pokemons[key].marker.setMap(null);
+                delete map_pokemons[key]
+            }
+        });
+    }
+});
+
+$('#pokemon-veryrare-switch').change(function() {
+    localStorage["showVeryRare"] = this.checked;
+    if (this.checked) {
+        updateMap();
+    } else {
+        $.each(map_pokemons, function(key, value) {
+            if (map_pokemons[key]['pokemon_rarity'] == "Very Rare") {
+                map_pokemons[key].marker.setMap(null);
+                delete map_pokemons[key]
+            }
+        });
+    }
+});
+
+$('#pokemon-ultrarare-switch').change(function() {
+    localStorage["showUltraRare"] = this.checked;
+    if (this.checked) {
+        updateMap();
+    } else {
+        $.each(map_pokemons, function(key, value) {
+            if (map_pokemons[key]['pokemon_rarity'] == "Ultra Rare") {
+                map_pokemons[key].marker.setMap(null);
+                delete map_pokemons[key]
+            }
+        });
         }
     });
 
